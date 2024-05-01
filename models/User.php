@@ -10,7 +10,6 @@ class User extends ActiveRecord
     public function rules()
     {
         return [
-            
             [['login', 'password_hash', 'name', 'surname', 'email', 'role', 'auth_key'], 'required']
         ];
     }
@@ -47,9 +46,13 @@ class User extends ActiveRecord
         return $this->password_hash === $hash;
     }
 
-    public static function validateAuthKey($login, $auth_key)
+    public function checkPermission($login, $auth_key)
     {
-        $model_key = static::findByUsername($login)->auth_key;
-        return $model_key === $auth_key;
+        $model = $this->findByUsername($login);
+        $model_key = $this->findByUsername($login)->auth_key;
+        return [
+            "role" => $model->role,
+            "approval" => $model_key == $auth_key,
+        ];
     }
 }
