@@ -35,4 +35,9 @@ class Groups extends ActiveRecord
     {
         return static::findAll(['owner_id' => $owner_id]);
     }
+
+    public static function findByInvite($invite_token)
+    {
+        return static::findOne(['invite_token' => $invite_token]);
+    }
 }

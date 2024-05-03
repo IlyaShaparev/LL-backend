@@ -50,7 +50,14 @@ $config = [
             'showScriptName' => false,
             'rules' => [
                 ['class' => 'yii\rest\UrlRule', 'controller' => 'user'],
-                ['class' => 'yii\rest\UrlRule', 'controller' => 'groups'],
+                ['class' => 'yii\rest\UrlRule',
+                 'controller' => 'groups',
+                 'extraPatterns' => [
+                    'DELETE' => 'delete',
+                    'PUT,PATCH' => 'update',
+                    'POST join/<invite_token>' => 'join',
+                ],
+                ],
             ],
         ],
         

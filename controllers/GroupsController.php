@@ -8,36 +8,23 @@ use app\models\Groups;
 use app\models\User;
 use app\models\GroupToStudent;
 use yii\rest\Controller;
+use yii\rest\ActiveController;
 
-class GroupsController extends Controller
+class GroupsController extends ActiveController
 {
     public $modelClass = 'app\models\Groups';
+    private $_response = [
+        "status" => '400',
+        "data" => 'Что-то пошло не так!',
+    ];
 
-    public function actionGet()
+    public function actions()
     {
-        $request = Yii::$app->request;
-        $params = $request->bodyParams;
-        $response = [
-            "status" => '400',
-            "data" => 'Что-то пошло не так!',
-        ];
+        $actions = parent::actions();
 
-        // Ищем данные автора
-        $user = User::findByUsername($params['login']);
+        unset($actions['create'], $actions['delete'], $actions['update']);
 
-        // Вычисляем уровень доступа
-        $permission = $user->checkPermission($params['login'], $params['auth_key']);
-
-        // Проверяем может ли пользователь выполнить задачу
-        if ($permission['role'] !== 1 || !$permission['approval']) {
-            return $response;
-        }
-
-        if ($request->get('id')) {
-            return Groups::findAll(['owner_id' => $user->getID(), 'group_id' => $request->get('id')]);
-        }
-
-        return Groups::findAll(['owner_id' => $user->getID()]);
+        return $actions;
     }
 
     public function actionCreate()
@@ -162,8 +149,52 @@ class GroupsController extends Controller
         return $response;
     }
 
-    /*
-        1) Получение студентов по группе!
-        2) Проверить все ответы!
-    */
+    public function actionJoin($invite_token)
+    {
+        $request = Yii::$app->request;
+        $params = $request->bodyParams;
+
+        $response = $this->_response;
+
+        $user = User::findByUsername($params['login']);
+
+        $permission = $user->checkPermission($params['login'], $params['auth_key']);
+
+        if ($permission['role'] !== 0 || !$permission['approval']) {
+            $response['data'] = "Отказано в доступе";
+            return $response;
+        }
+
+        if (!Groups::findByInvite($request->get('invite_token')))
+        {
+            $response['data'] = 'Приглашение недействительно!';
+            return $response;
+        }
+        
+        $group_id = Groups::findByInvite($request->get('invite_token'))->getId();
+        if (GroupToStudent::findAll(['group_id' => $group_id, 'student_id' => $user->getId()])) {
+            $response['data'] = 'Вы уже состоите в группе!';
+            return $response;
+        }
+
+        $group2student = new GroupToStudent();
+        $group2student->group_id = $group_id;
+        $group2student->student_id = $user->getId();
+
+        if ($group2student->save()) {
+            $response = [
+                'status' => 200,
+                'data' => 'Вы успешно вступили в группу!',
+            ];
+            return $response;
+        }
+        
+        return $response;
+    }
 }
+
+
+
+
+// Vobrw3lR_7D1oneZertxQRozr6qkO7ZA     Max
+// BbDgwyakYmmEeYJvu-Wuiqh4zzkfUjv_     Anton
